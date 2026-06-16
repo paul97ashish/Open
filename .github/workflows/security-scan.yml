@@ -1,0 +1,70 @@
+name: Security scan
+
+# Runs vulnhound's dependency scanner against the real OSV.dev database (no model
+# required) and uploads the results as SARIF to GitHub code scanning. The SAST and
+# DAST modes need an OpenAI-compatible model endpoint, so they are not run here by
+# default — see the commented job below for how to wire one up with a self-hosted
+# runner + Ollama.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  dependency-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install vulnhound
+        run: pip install -e .
+
+      - name: Scan dependencies (OSV.dev)
+        # Don't fail the job on findings; we still want to publish the SARIF.
+        continue-on-error: true
+        run: |
+          vulnhound scan deps . \
+            --format sarif \
+            --output vulnhound.sarif \
+            --severity-threshold high
+
+      - name: Upload SARIF to code scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: vulnhound.sarif
+          category: vulnhound-deps
+
+  # ----------------------------------------------------------------------------
+  # Optional: LLM-powered SAST with a self-hosted runner that has Ollama running.
+  # Uncomment and adjust `runs-on` to your self-hosted label.
+  #
+  # sast-scan:
+  #   runs-on: [self-hosted, ollama]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-python@v5
+  #       with: { python-version: "3.12" }
+  #     - run: pip install -e .
+  #     - name: SAST scan
+  #       continue-on-error: true
+  #       env:
+  #         VULNHOUND_BASE_URL: http://localhost:11434/v1
+  #         VULNHOUND_MODEL: qwen2.5-coder
+  #       run: vulnhound scan code . --format sarif --output sast.sarif
+  #     - uses: github/codeql-action/upload-sarif@v3
+  #       with:
+  #         sarif_file: sast.sarif
+  #         category: vulnhound-sast

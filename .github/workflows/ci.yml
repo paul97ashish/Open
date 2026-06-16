@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run tests
+        run: pytest -q
+
+      - name: CLI smoke test (offline, mock model)
+        run: |
+          vulnhound --version
+          # The deps scan exits non-zero when findings meet the severity threshold
+          # (the example fixture is intentionally vulnerable); that's expected here,
+          # so don't let it fail the smoke step — we're validating SARIF output.
+          vulnhound scan deps examples/ --mock --format sarif --output deps.sarif || true
+          python -c "import json; d=json.load(open('deps.sarif')); assert d['version']=='2.1.0'; print('SARIF OK:', len(d['runs'][0]['results']), 'result(s)')"
