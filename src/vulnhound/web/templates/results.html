@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan Results — vulnhound</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>vulnhound</h1>
+            <p class="subtitle">Scan Results</p>
+        </header>
+
+        <main>
+            <div class="results-header">
+                <h2>Results for: <code>{{ target }}</code></h2>
+                <p class="scan-type">Scan type: <strong>{{ scan_type }}</strong></p>
+                <a href="/" class="btn btn-secondary">New Scan</a>
+            </div>
+
+            {% if error %}
+            <div class="error-panel">
+                <h3>⚠️ Error</h3>
+                <p>{{ error }}</p>
+            </div>
+            {% endif %}
+
+            {% if findings %}
+            <div class="results-summary">
+                <h3>Findings Summary</h3>
+                <div class="severity-counts">
+                    {% if severity_summary.critical > 0 %}
+                    <span class="count critical">
+                        <strong class="severity-label">CRITICAL</strong>
+                        <span class="count-number">{{ severity_summary.critical }}</span>
+                    </span>
+                    {% endif %}
+                    {% if severity_summary.high > 0 %}
+                    <span class="count high">
+                        <strong class="severity-label">HIGH</strong>
+                        <span class="count-number">{{ severity_summary.high }}</span>
+                    </span>
+                    {% endif %}
+                    {% if severity_summary.medium > 0 %}
+                    <span class="count medium">
+                        <strong class="severity-label">MEDIUM</strong>
+                        <span class="count-number">{{ severity_summary.medium }}</span>
+                    </span>
+                    {% endif %}
+                    {% if severity_summary.low > 0 %}
+                    <span class="count low">
+                        <strong class="severity-label">LOW</strong>
+                        <span class="count-number">{{ severity_summary.low }}</span>
+                    </span>
+                    {% endif %}
+                    {% if severity_summary.info > 0 %}
+                    <span class="count info">
+                        <strong class="severity-label">INFO</strong>
+                        <span class="count-number">{{ severity_summary.info }}</span>
+                    </span>
+                    {% endif %}
+                </div>
+                <p class="total-findings">Total findings: <strong>{{ findings|length }}</strong></p>
+            </div>
+
+            <div class="download-links">
+                <a href="/api/scan?scan_type={{ scan_type }}&target={{ target }}&format=json" class="btn btn-small">Download JSON</a>
+                <a href="/api/scan?scan_type={{ scan_type }}&target={{ target }}&format=sarif" class="btn btn-small">Download SARIF</a>
+            </div>
+
+            <table class="findings-table">
+                <thead>
+                    <tr>
+                        <th>Severity</th>
+                        <th>Source</th>
+                        <th>CWE</th>
+                        <th>Location</th>
+                        <th>Title</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for finding in findings %}
+                    <tr class="finding finding-{{ finding.severity.label }}">
+                        <td class="severity">
+                            <span class="severity-badge severity-{{ finding.severity.label }}">
+                                {{ finding.severity.label|upper }}
+                            </span>
+                        </td>
+                        <td class="source">{{ finding.source }}</td>
+                        <td class="cwe">
+                            {% if finding.cwe %}
+                            <code>{{ finding.cwe }}</code>
+                            {% else %}
+                            <em>—</em>
+                            {% endif %}
+                        </td>
+                        <td class="location">
+                            {% if finding.file %}
+                            <code>{{ finding.file }}</code>
+                            {% if finding.start_line > 0 %}
+                            <span class="line-range">:{{ finding.start_line }}
+                                {% if finding.end_line > finding.start_line %}–{{ finding.end_line }}{% endif %}
+                            </span>
+                            {% endif %}
+                            {% else %}
+                            <em>—</em>
+                            {% endif %}
+                        </td>
+                        <td class="title">{{ finding.title }}</td>
+                        <td class="description">
+                            <details>
+                                <summary>Details</summary>
+                                <div class="details-content">
+                                    {% if finding.description %}
+                                    <p><strong>Description:</strong> {{ finding.description }}</p>
+                                    {% endif %}
+                                    {% if finding.recommendation %}
+                                    <p><strong>Recommendation:</strong> {{ finding.recommendation }}</p>
+                                    {% endif %}
+                                    {% if finding.confidence %}
+                                    <p><strong>Confidence:</strong> {{ "%.0f%%"|format(finding.confidence * 100) }}</p>
+                                    {% endif %}
+                                    {% if finding.references %}
+                                    <p><strong>References:</strong>
+                                        {% for ref in finding.references %}
+                                        <a href="{{ ref }}" target="_blank">{{ ref }}</a>{% if not loop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </details>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="no-findings">
+                <p>✓ No findings detected!</p>
+            </div>
+            {% endif %}
+        </main>
+
+        <footer>
+            <p>vulnhound — LLM security scanner</p>
+        </footer>
+    </div>
+</body>
+</html>

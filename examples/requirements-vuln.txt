@@ -1,0 +1,6 @@
+# Intentional fixture: well-known historically-vulnerable packages for testing
+# These versions contain known security vulnerabilities
+requests==2.19.1
+pyyaml==5.1
+jinja2==2.10
+urllib3==1.24.1
