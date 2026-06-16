@@ -17,6 +17,31 @@ explicitly point it at one.
 
 ---
 
+## Quickstart (60 seconds)
+
+```bash
+# 1. Install (from the repo root)
+pip install -e .
+
+# 2a. Try it immediately with no model — offline mock mode
+vulnhound scan deps examples/ --mock          # flags the vulnerable example deps
+vulnhound scan code examples/ --mock          # runs the SAST pipeline offline
+
+# 2b. Or point it at a real local model (see "Connect a model" below)
+ollama pull qwen2.5-coder
+vulnhound scan code ./your-project \
+  --base-url http://localhost:11434/v1 --model qwen2.5-coder
+
+# 3. Or launch the web dashboard
+vulnhound serve                                # open http://127.0.0.1:8000
+```
+
+Every command is also available as `python -m vulnhound ...` if the `vulnhound`
+script isn't on your `PATH`. Run `vulnhound --help` or `vulnhound scan code --help`
+for the full list of flags.
+
+---
+
 ## Scan modes
 
 | Mode | Command | What it does |
@@ -95,6 +120,21 @@ vulnhound scan web https://staging.internal.example --authorized \
 # Web dashboard
 vulnhound serve            # then open http://127.0.0.1:8000
 ```
+
+### Running the web dashboard
+
+```bash
+vulnhound serve                          # http://127.0.0.1:8000
+vulnhound serve --host 0.0.0.0 --port 9000   # bind elsewhere
+vulnhound serve --reload                 # auto-reload while developing
+```
+
+The dashboard lets you pick a scan type (code / deps / web), enter a target, choose
+a model (or tick **mock** to run offline), set the severity threshold, and view the
+findings table. The web target form requires the **authorized** checkbox before a
+DAST scan will run. Findings can be downloaded as JSON or SARIF, and a JSON API is
+available at `GET /api/scan` (`?format=sarif` for SARIF); `GET /healthz` returns a
+health check.
 
 ### Exit codes
 
